@@ -87,6 +87,18 @@ export default function FarmerDashboard() {
                   <td className="p-6"><span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">Active</span></td>
                 </tr>
                 <tr className="hover:bg-stone-50 transition-colors">
+                  <td className="p-6 font-medium text-stone-900">Okinawan Sweet Potato (2 lb)</td>
+                  <td className="p-6 text-stone-600">$7.50</td>
+                  <td className="p-6 text-stone-600">50</td>
+                  <td className="p-6"><span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">Active</span></td>
+                </tr>
+                <tr className="hover:bg-stone-50 transition-colors">
+                  <td className="p-6 font-medium text-stone-900">Cherry Tomatoes (Pint)</td>
+                  <td className="p-6 text-stone-600">$5.00</td>
+                  <td className="p-6 text-stone-600">30</td>
+                  <td className="p-6"><span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">Active</span></td>
+                </tr>
+                <tr className="hover:bg-stone-50 transition-colors">
                   <td className="p-6 font-medium text-stone-900">Aquaponic Butter Lettuce</td>
                   <td className="p-6 text-stone-600">$3.00</td>
                   <td className="p-6 text-stone-600">0</td>

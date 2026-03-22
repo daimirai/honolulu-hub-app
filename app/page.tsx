@@ -1,5 +1,6 @@
 import React from 'react';
 import { ShoppingBag, MapPin, Clock, Leaf } from 'lucide-react';
+import Link from 'next/link';
 
 export default function ConsumerStorefront() {
   return (
@@ -73,6 +74,34 @@ export default function ConsumerStorefront() {
           </div>
         </div>
 
+        {/* Item 3 */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-stone-200 flex flex-col md:flex-row justify-between items-center gap-4">
+          <div>
+            <h3 className="text-xl font-bold">Okinawan Sweet Potato (2 lb)</h3>
+            <p className="text-stone-500 mt-1">Vibrant purple, naturally sweet, and nutrient-dense.</p>
+          </div>
+          <div className="flex items-center gap-4 w-full md:w-auto justify-between">
+            <span className="text-2xl font-bold text-stone-900">$7.50</span>
+            <button className="bg-stone-900 hover:bg-stone-800 text-white px-6 py-2 rounded-lg font-medium transition-colors">
+              Add to Box
+            </button>
+          </div>
+        </div>
+
+        {/* Item 4 */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-stone-200 flex flex-col md:flex-row justify-between items-center gap-4">
+          <div>
+            <h3 className="text-xl font-bold">Local Cherry Tomatoes (Pint)</h3>
+            <p className="text-stone-500 mt-1">Sun-ripened in Waimanalo. Bursting with flavor.</p>
+          </div>
+          <div className="flex items-center gap-4 w-full md:w-auto justify-between">
+            <span className="text-2xl font-bold text-stone-900">$5.00</span>
+            <button className="bg-stone-900 hover:bg-stone-800 text-white px-6 py-2 rounded-lg font-medium transition-colors">
+              Add to Box
+            </button>
+          </div>
+        </div>
+
       </main>
 
       {/* Floating Checkout Bar */}
@@ -82,9 +111,9 @@ export default function ConsumerStorefront() {
             <p className="text-stone-500 text-sm font-medium">Your Box</p>
             <p className="text-2xl font-bold text-stone-900">$10.50</p>
           </div>
-          <button className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-xl font-bold text-lg shadow-sm transition-colors">
+          <Link href="/checkout" className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-xl font-bold text-lg shadow-sm transition-colors">
             Checkout
-          </button>
+          </Link>
         </div>
       </div>
     </div>
