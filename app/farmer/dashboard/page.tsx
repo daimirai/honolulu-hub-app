@@ -64,7 +64,7 @@ export default function FarmerDashboard() {
     setSaving(true);
     try {
       for (const crop of crops) {
-        await supabase
+        const { error } = await supabase
           .from('products')
           .update({ 
             price: crop.price, 
@@ -72,10 +72,12 @@ export default function FarmerDashboard() {
             status: crop.status 
           })
           .eq('id', crop.id);
+        if (error) throw error;
       }
       setIsEditing(false);
-    } catch (err) {
-      alert("Error saving inventory");
+    } catch (err: any) {
+      console.error("Save error:", err);
+      alert(`Error saving inventory: ${err.message || 'Unknown error'}`);
     } finally {
       setSaving(false);
     }
@@ -85,20 +87,27 @@ export default function FarmerDashboard() {
     if (!newCrop.name) return;
     setSaving(true);
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('products')
         .insert([{
-          ...newCrop,
+          name: newCrop.name,
+          price: newCrop.price,
+          available_quantity: newCrop.available_quantity,
           status: newCrop.available_quantity > 0 ? 'Active' : 'Sold Out'
+          // Removed farmer_id for now as it's optional in schema but may fail if UUID format is expected
         }]);
       
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase insert error:", error);
+        throw error;
+      }
       
       setIsAdding(false);
       setNewCrop({ name: '', price: 0, available_quantity: 0 });
       await fetchInventory();
-    } catch (err) {
-      alert("Error adding crop");
+    } catch (err: any) {
+      console.error("Detailed Add Error:", err);
+      alert(`Error adding crop: ${err.message || 'Check console for details'}`);
     } finally {
       setSaving(false);
     }
@@ -115,8 +124,9 @@ export default function FarmerDashboard() {
       
       if (error) throw error;
       await fetchInventory();
-    } catch (err) {
-      alert("Error deleting crop");
+    } catch (err: any) {
+      console.error("Delete error:", err);
+      alert(`Error deleting crop: ${err.message}`);
     } finally {
       setSaving(false);
     }
