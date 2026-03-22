@@ -3,12 +3,14 @@
 import React, { useState, useEffect } from 'react';
 import { CreditCard, ShieldCheck, ArrowLeft, Leaf, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useCart } from '@/lib/cart-context';
 
 export default function CheckoutPage() {
   const { products, cart, cartTotal, loading } = useCart();
   const [paying, setPaying] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     setIsMounted(true);
@@ -16,10 +18,12 @@ export default function CheckoutPage() {
 
   const handlePayment = () => {
     setPaying(true);
+    // Simulate payment processing delay
     setTimeout(() => {
-      alert("This will eventually redirect to Stripe for secure payment.");
-      setPaying(false);
-    }, 1000);
+      // In development/test mode, we redirect directly to success with a mock session ID
+      const mockSessionId = 'TEST-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+      router.push(`/checkout/success?session_id=${mockSessionId}`);
+    }, 1500);
   };
 
   if (!isMounted || loading) return (
@@ -76,15 +80,15 @@ export default function CheckoutPage() {
                 disabled={paying || cartItems.length === 0}
                 className="w-full bg-stone-900 hover:bg-stone-800 disabled:bg-stone-200 text-white py-4 rounded-2xl font-bold text-xl shadow-lg transition-all flex items-center justify-center"
               >
-                {paying ? "Processing..." : (
+                {paying ? "Finalizing Order..." : (
                   <>
-                    <CreditCard className="mr-3" /> Pay with Card
+                    <CreditCard className="mr-3" /> Complete Order (Test)
                   </>
                 )}
               </button>
               
               <div className="flex items-center justify-center text-stone-400 text-sm gap-4">
-                <span className="flex items-center"><ShieldCheck size={16} className="mr-1 text-green-600"/> Secure via Stripe</span>
+                <span className="flex items-center"><ShieldCheck size={16} className="mr-1 text-green-600"/> Secure Checkout</span>
                 <span>•</span>
                 <span>Cancel until Thu 8pm</span>
               </div>
