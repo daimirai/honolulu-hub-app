@@ -1,27 +1,37 @@
 'use client';
 
-import React, { useState } from 'react';
-import { PlusCircle, Calendar, DollarSign, Sprout, ArrowRight, Save, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { PlusCircle, Calendar, DollarSign, Sprout, ArrowRight, Save, X, Loader2 } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 interface Crop {
   id: string;
   name: string;
-  price: string;
-  available: number;
+  price: number;
+  available_quantity: number;
   status: 'Active' | 'Sold Out';
 }
 
-const INITIAL_CROPS: Crop[] = [
-  { id: '1', name: 'Apple Bananas (Bunch)', price: '$6.00', available: 40, status: 'Active' },
-  { id: '2', name: 'Taro / Kalo (lb)', price: '$4.50', available: 100, status: 'Active' },
-  { id: '3', name: 'Okinawan Sweet Potato (2 lb)', price: '$7.50', available: 50, status: 'Active' },
-  { id: '4', name: 'Cherry Tomatoes (Pint)', price: '$5.00', available: 30, status: 'Active' },
-  { id: '5', name: 'Aquaponic Butter Lettuce', price: '$3.00', available: 0, status: 'Sold Out' },
-];
-
 export default function FarmerDashboard() {
-  const [crops, setCrops] = useState<Crop[]>(INITIAL_CROPS);
+  const [crops, setCrops] = useState<Crop[]>([]);
   const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    fetchInventory();
+  }, []);
+
+  async function fetchInventory() {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .order('name');
+    
+    if (data) setCrops(data);
+    setLoading(false);
+  }
 
   const handleConnectStripe = async () => {
     try {
@@ -35,12 +45,11 @@ export default function FarmerDashboard() {
     }
   };
 
-  const updateInventory = (id: string, field: keyof Crop, value: string | number) => {
+  const updateInventoryField = (id: string, field: keyof Crop, value: any) => {
     setCrops(prev => prev.map(crop => {
       if (crop.id === id) {
         const updated = { ...crop, [field]: value };
-        // Auto-update status based on availability
-        if (field === 'available') {
+        if (field === 'available_quantity') {
           updated.status = Number(value) > 0 ? 'Active' : 'Sold Out';
         }
         return updated;
@@ -49,11 +58,37 @@ export default function FarmerDashboard() {
     }));
   };
 
+  const saveChanges = async () => {
+    setSaving(true);
+    try {
+      for (const crop of crops) {
+        await supabase
+          .from('products')
+          .update({ 
+            price: crop.price, 
+            available_quantity: crop.available_quantity,
+            status: crop.status 
+          })
+          .eq('id', crop.id);
+      }
+      setIsEditing(false);
+    } catch (err) {
+      alert("Error saving inventory");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) return (
+    <div className="min-h-screen bg-stone-50 flex items-center justify-center">
+      <Loader2 className="animate-spin text-green-700" size={48} />
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-stone-50 p-8 font-sans">
       <div className="max-w-5xl mx-auto space-y-8">
         
-        {/* Header & Stripe CTA */}
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-6 rounded-2xl shadow-sm border border-stone-200">
           <div>
             <h1 className="text-3xl font-bold text-stone-900 flex items-center">
@@ -70,7 +105,6 @@ export default function FarmerDashboard() {
           </button>
         </header>
 
-        {/* Dashboard Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-stone-200">
             <div className="text-stone-500 mb-2 flex items-center font-medium">
@@ -88,7 +122,6 @@ export default function FarmerDashboard() {
           </div>
         </div>
 
-        {/* Inventory Management */}
         <div className="bg-white rounded-2xl shadow-sm border border-stone-200 overflow-hidden">
           <div className="p-6 border-b border-stone-100 flex justify-between items-center bg-stone-50/50">
             <h2 className="text-xl font-bold text-stone-800">Weekly Harvest List</h2>
@@ -96,13 +129,15 @@ export default function FarmerDashboard() {
               {isEditing ? (
                 <>
                   <button 
-                    onClick={() => setIsEditing(false)}
-                    className="text-stone-700 bg-stone-100 hover:bg-stone-200 px-4 py-2 rounded-lg flex items-center font-medium transition-colors"
+                    onClick={saveChanges}
+                    disabled={saving}
+                    className="text-stone-700 bg-stone-100 hover:bg-green-100 px-4 py-2 rounded-lg flex items-center font-medium transition-colors"
                   >
-                    <Save size={18} className="mr-2"/> Save Changes
+                    {saving ? <Loader2 className="animate-spin mr-2" size={18}/> : <Save size={18} className="mr-2"/>}
+                    Save Changes
                   </button>
                   <button 
-                    onClick={() => setIsEditing(false)}
+                    onClick={() => { setIsEditing(false); fetchInventory(); }}
                     className="text-red-700 bg-red-50 hover:bg-red-100 px-4 py-2 rounded-lg flex items-center font-medium transition-colors"
                   >
                     <X size={18} className="mr-2"/> Cancel
@@ -132,17 +167,31 @@ export default function FarmerDashboard() {
                 {crops.map((crop) => (
                   <tr key={crop.id} className="hover:bg-stone-50 transition-colors">
                     <td className="p-6 font-medium text-stone-900">{crop.name}</td>
-                    <td className="p-6 text-stone-600">{crop.price}</td>
+                    <td className="p-6 text-stone-600">
+                      {isEditing ? (
+                        <div className="flex items-center">
+                          $<input 
+                            type="number"
+                            step="0.01"
+                            value={crop.price}
+                            onChange={(e) => updateInventoryField(crop.id, 'price', parseFloat(e.target.value) || 0)}
+                            className="w-20 px-2 py-1 border border-stone-200 rounded bg-white text-stone-900 ml-1"
+                          />
+                        </div>
+                      ) : (
+                        `$${crop.price.toFixed(2)}`
+                      )}
+                    </td>
                     <td className="p-6 text-stone-600">
                       {isEditing ? (
                         <input 
                           type="number"
-                          value={crop.available}
-                          onChange={(e) => updateInventory(crop.id, 'available', parseInt(e.target.value) || 0)}
+                          value={crop.available_quantity}
+                          onChange={(e) => updateInventoryField(crop.id, 'available_quantity', parseInt(e.target.value) || 0)}
                           className="w-20 px-2 py-1 border border-stone-200 rounded bg-white text-stone-900"
                         />
                       ) : (
-                        crop.available
+                        crop.available_quantity
                       )}
                     </td>
                     <td className="p-6">

@@ -5,6 +5,7 @@ import { CreditCard, ShieldCheck, ArrowLeft, Leaf, Loader2 } from 'lucide-react'
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/lib/cart-context';
+import { supabase } from '@/lib/supabase';
 
 export default function CheckoutPage() {
   const { products, cart, cartTotal, loading } = useCart();
@@ -16,14 +17,48 @@ export default function CheckoutPage() {
     setIsMounted(true);
   }, []);
 
-  const handlePayment = () => {
+  const handlePayment = async () => {
     setPaying(true);
-    // Simulate payment processing delay
-    setTimeout(() => {
-      // In development/test mode, we redirect directly to success with a mock session ID
-      const mockSessionId = 'TEST-' + Math.random().toString(36).substr(2, 9).toUpperCase();
-      router.push(`/checkout/success?session_id=${mockSessionId}`);
-    }, 1500);
+    
+    try {
+      // 1. Create the Order in Supabase
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .insert([{
+          total_amount: cartTotal,
+          status: 'paid', // Mock payment success
+          customer_email: 'demo@customer.com' // Future: collect this
+        }])
+        .select()
+        .single();
+
+      if (orderError) throw orderError;
+
+      // 2. Add Line Items
+      const cartItems = Object.entries(cart).map(([id, qty]) => {
+        const product = products.find(p => p.id === id);
+        return {
+          order_id: order.id,
+          product_id: id,
+          quantity: qty,
+          price_at_purchase: product?.price || 0
+        };
+      });
+
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(cartItems);
+
+      if (itemsError) throw itemsError;
+
+      // 3. Redirect to Success with real Order ID
+      router.push(`/checkout/success?session_id=${order.id}`);
+
+    } catch (err: any) {
+      console.error("Order Creation Error:", err);
+      alert("Failed to create order. Please try again.");
+      setPaying(false);
+    }
   };
 
   if (!isMounted || loading) return (
@@ -32,7 +67,7 @@ export default function CheckoutPage() {
     </div>
   );
 
-  const cartItems = Object.entries(cart).map(([id, qty]) => {
+  const cartItemsList = Object.entries(cart).map(([id, qty]) => {
     const product = products.find(p => p.id === id);
     return { ...product, qty };
   }).filter(item => item.id);
@@ -40,7 +75,6 @@ export default function CheckoutPage() {
   return (
     <div className="min-h-screen bg-stone-50 font-sans text-stone-900 p-4 md:p-8">
       <div className="max-w-2xl mx-auto">
-        
         <Link href="/" className="inline-flex items-center text-stone-500 hover:text-stone-900 mb-8 transition-colors">
           <ArrowLeft size={20} className="mr-2" /> Back to Harvest
         </Link>
@@ -56,18 +90,15 @@ export default function CheckoutPage() {
             <div className="space-y-4">
               <h2 className="text-lg font-bold uppercase tracking-wider text-stone-400">Order Summary</h2>
               <div className="divide-y divide-stone-100 border-t border-b border-stone-100 py-2">
-                {cartItems.length > 0 ? cartItems.map((item: any) => (
+                {cartItemsList.length > 0 ? cartItemsList.map((item: any) => (
                   <div key={item.id} className="flex justify-between py-3">
                     <span>{item.name} <span className="text-stone-400 ml-2">x{item.qty}</span></span>
                     <span className="font-bold">${((item.price || 0) * item.qty).toFixed(2)}</span>
                   </div>
                 )) : (
-                  <div className="py-6 text-center text-stone-500 italic">
-                    Your box is empty. Go back to the harvest list!
-                  </div>
+                  <div className="py-6 text-center text-stone-500 italic">Your box is empty.</div>
                 )}
               </div>
-              
               <div className="flex justify-between items-center pt-2">
                 <span className="text-xl font-medium">Total due today</span>
                 <span className="text-3xl font-black">${cartTotal.toFixed(2)}</span>
@@ -77,7 +108,7 @@ export default function CheckoutPage() {
             <div className="space-y-4 pt-4">
               <button 
                 onClick={handlePayment}
-                disabled={paying || cartItems.length === 0}
+                disabled={paying || cartItemsList.length === 0}
                 className="w-full bg-stone-900 hover:bg-stone-800 disabled:bg-stone-200 text-white py-4 rounded-2xl font-bold text-xl shadow-lg transition-all flex items-center justify-center"
               >
                 {paying ? "Finalizing Order..." : (
@@ -86,7 +117,6 @@ export default function CheckoutPage() {
                   </>
                 )}
               </button>
-              
               <div className="flex items-center justify-center text-stone-400 text-sm gap-4">
                 <span className="flex items-center"><ShieldCheck size={16} className="mr-1 text-green-600"/> Secure Checkout</span>
                 <span>•</span>

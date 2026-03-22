@@ -4,11 +4,13 @@ import React, { useEffect, useState } from 'react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import { Camera, CheckCircle, XCircle, RefreshCw, ArrowLeft, Shield } from 'lucide-react';
 import Link from 'next/link';
+import { supabase } from '@/lib/supabase';
 
 export default function HubScanner() {
   const [scanResult, setScanResult] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const [isValid, setIsValid] = useState<boolean | null>(null);
+  const [orderData, setOrderData] = useState<any>(null);
 
   useEffect(() => {
     const scanner = new Html5QrcodeScanner(
@@ -25,11 +27,9 @@ export default function HubScanner() {
       (decodedText) => {
         setScanResult(decodedText);
         verifyTicket(decodedText);
-        scanner.clear(); // Stop scanning after success
+        scanner.clear();
       },
-      (error) => {
-        // console.warn(error);
-      }
+      (error) => {}
     );
 
     return () => {
@@ -39,17 +39,44 @@ export default function HubScanner() {
 
   const verifyTicket = async (ticketId: string) => {
     setIsVerifying(true);
-    // Simulate Supabase verification delay
-    setTimeout(() => {
-      // For MVP Demo: Any ID starting with TEST- or DEMO- is valid
-      const valid = ticketId.startsWith('TEST-') || ticketId.startsWith('DEMO-');
-      setIsValid(valid);
+    try {
+      // 1. Check database for order
+      const { data, error } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          order_items (
+            quantity,
+            products (name)
+          )
+        `)
+        .eq('id', ticketId)
+        .single();
+
+      if (error || !data) {
+        setIsValid(false);
+      } else if (data.status === 'picked_up') {
+        setIsValid(false); // Already picked up
+        alert("This order was already picked up!");
+      } else {
+        setOrderData(data);
+        // 2. Mark as Picked Up instantly
+        await supabase
+          .from('orders')
+          .update({ status: 'picked_up' })
+          .eq('id', ticketId);
+        
+        setIsValid(true);
+      }
+    } catch (err) {
+      setIsValid(false);
+    } finally {
       setIsVerifying(false);
-    }, 1200);
+    }
   };
 
   const resetScanner = () => {
-    window.location.reload(); // Simplest way to re-init the scanner library
+    window.location.reload();
   };
 
   return (
@@ -71,13 +98,11 @@ export default function HubScanner() {
           <p className="text-stone-400">Scan customer QR ticket to verify order</p>
         </header>
 
-        {/* Scanner Container */}
         <div className="relative aspect-square bg-black rounded-[2.5rem] border-4 border-stone-800 overflow-hidden shadow-2xl">
           {!scanResult && (
             <div id="reader" className="w-full h-full"></div>
           )}
           
-          {/* Status Overlays */}
           {isVerifying && (
             <div className="absolute inset-0 bg-stone-900/90 flex flex-col items-center justify-center space-y-4 animate-in fade-in duration-300">
               <RefreshCw className="animate-spin text-indigo-400" size={48} />
@@ -86,15 +111,27 @@ export default function HubScanner() {
           )}
 
           {scanResult && !isVerifying && isValid === true && (
-            <div className="absolute inset-0 bg-green-600 flex flex-col items-center justify-center space-y-4 animate-in zoom-in duration-300">
-              <CheckCircle className="text-white" size={80} />
+            <div className="absolute inset-0 bg-green-600 flex flex-col items-center justify-center space-y-4 animate-in zoom-in duration-300 p-6 overflow-y-auto">
+              <CheckCircle className="text-white" size={64} />
               <div className="text-center">
                 <p className="font-black text-2xl uppercase italic">Valid Ticket</p>
-                <p className="text-green-100 font-mono mt-1 text-sm">{scanResult}</p>
+                <p className="text-green-100 font-mono text-xs opacity-70 mb-4">{scanResult}</p>
               </div>
+              
+              {/* Order Contents for Staff */}
+              <div className="w-full bg-white/10 rounded-xl p-4 text-left space-y-2">
+                <p className="text-[10px] font-bold uppercase text-green-200">Box Contents:</p>
+                {orderData?.order_items.map((item: any, i: number) => (
+                  <div key={i} className="flex justify-between text-sm font-bold">
+                    <span>{item.products.name}</span>
+                    <span>x{item.quantity}</span>
+                  </div>
+                ))}
+              </div>
+
               <button 
                 onClick={resetScanner}
-                className="mt-4 bg-white text-green-700 px-8 py-3 rounded-xl font-bold hover:bg-stone-100 transition-all"
+                className="w-full bg-white text-green-700 py-3 rounded-xl font-bold hover:bg-stone-100 transition-all mt-4"
               >
                 Next Customer
               </button>
@@ -106,7 +143,7 @@ export default function HubScanner() {
               <XCircle className="text-white" size={80} />
               <div className="text-center px-6">
                 <p className="font-black text-2xl uppercase italic">Invalid Ticket</p>
-                <p className="text-red-100 mt-2 text-sm leading-relaxed">Ticket ID not found in database. Please check the customer's receipt.</p>
+                <p className="text-red-100 mt-2 text-sm leading-relaxed">Ticket ID not found or already scanned.</p>
               </div>
               <button 
                 onClick={resetScanner}
@@ -118,21 +155,18 @@ export default function HubScanner() {
           )}
         </div>
 
-        {/* Info Panel */}
         <div className="bg-stone-800/50 rounded-2xl p-6 border border-stone-700/50">
           <div className="flex items-start space-x-4">
             <Camera className="text-stone-500 mt-1" size={24} />
             <div className="space-y-1">
               <p className="text-sm font-bold">Scanning Protocol</p>
               <ul className="text-xs text-stone-400 space-y-2 list-disc pl-4">
-                <li>Center the QR code in the frame</li>
-                <li>Ensure there is adequate morning lighting</li>
                 <li>Wait for green "Valid" screen before releasing box</li>
+                <li>The list above shows exactly what to put in the bag</li>
               </ul>
             </div>
           </div>
         </div>
-
       </div>
     </div>
   );
