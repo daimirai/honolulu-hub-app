@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { CreditCard, ShieldCheck, ArrowLeft, Leaf } from 'lucide-react';
 import Link from 'next/link';
-import { useCart, PRODUCTS } from '../lib/cart-context';
+import { useCart, PRODUCTS } from '@/lib/cart-context';
 
 export default function CheckoutPage() {
   const { cart, cartTotal } = useCart();

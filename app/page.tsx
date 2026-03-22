@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { ShoppingBag, MapPin, Clock, Leaf, ShoppingCart, Plus, Minus } from 'lucide-react';
 import Link from 'next/link';
-import { useCart, PRODUCTS } from '../lib/cart-context';
+import { useCart, PRODUCTS } from '@/lib/cart-context';
 
 export default function ConsumerStorefront() {
   const { cart, addToCart, removeFromCart, cartTotal, cartCount } = useCart();
