@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { PlusCircle, Calendar, DollarSign, Sprout, ArrowRight, Save, X, Loader2 } from 'lucide-react';
+import { PlusCircle, Calendar, DollarSign, Sprout, ArrowRight, Save, X, Loader2, Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 interface Crop {
@@ -17,6 +17,8 @@ export default function FarmerDashboard() {
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
+  const [newCrop, setNewCrop] = useState({ name: '', price: 0, available_quantity: 0 });
 
   useEffect(() => {
     fetchInventory();
@@ -74,6 +76,47 @@ export default function FarmerDashboard() {
       setIsEditing(false);
     } catch (err) {
       alert("Error saving inventory");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const addCrop = async () => {
+    if (!newCrop.name) return;
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('products')
+        .insert([{
+          ...newCrop,
+          status: newCrop.available_quantity > 0 ? 'Active' : 'Sold Out'
+        }]);
+      
+      if (error) throw error;
+      
+      setIsAdding(false);
+      setNewCrop({ name: '', price: 0, available_quantity: 0 });
+      await fetchInventory();
+    } catch (err) {
+      alert("Error adding crop");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const deleteCrop = async (id: string) => {
+    if (!confirm("Are you sure you want to remove this crop?")) return;
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      await fetchInventory();
+    } catch (err) {
+      alert("Error deleting crop");
     } finally {
       setSaving(false);
     }
@@ -144,15 +187,66 @@ export default function FarmerDashboard() {
                   </button>
                 </>
               ) : (
-                <button 
-                  onClick={() => setIsEditing(true)}
-                  className="text-green-700 bg-green-100 hover:bg-green-200 px-4 py-2 rounded-lg flex items-center font-medium transition-colors"
-                >
-                  <PlusCircle size={18} className="mr-2"/> Manage Inventory
-                </button>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => setIsAdding(true)}
+                    className="text-green-700 bg-green-100 hover:bg-green-200 px-4 py-2 rounded-lg flex items-center font-medium transition-colors"
+                  >
+                    <PlusCircle size={18} className="mr-2"/> Add Crop
+                  </button>
+                  <button 
+                    onClick={() => setIsEditing(true)}
+                    className="text-stone-700 bg-stone-100 hover:bg-stone-200 px-4 py-2 rounded-lg flex items-center font-medium transition-colors"
+                  >
+                    Manage Inventory
+                  </button>
+                </div>
               )}
             </div>
           </div>
+
+          {isAdding && (
+            <div className="p-6 bg-stone-50 border-b border-stone-100 animate-in fade-in slide-in-from-top-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                <div>
+                  <label className="block text-xs font-bold text-stone-500 uppercase mb-1">Crop Name</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. Papaya" 
+                    className="w-full px-3 py-2 border rounded-lg bg-white"
+                    value={newCrop.name}
+                    onChange={e => setNewCrop({...newCrop, name: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-stone-500 uppercase mb-1">Price</label>
+                  <input 
+                    type="number" 
+                    step="0.01"
+                    placeholder="0.00" 
+                    className="w-full px-3 py-2 border rounded-lg bg-white"
+                    value={newCrop.price || ''}
+                    onChange={e => setNewCrop({...newCrop, price: parseFloat(e.target.value) || 0})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-stone-500 uppercase mb-1">Available</label>
+                  <input 
+                    type="number" 
+                    placeholder="0" 
+                    className="w-full px-3 py-2 border rounded-lg bg-white"
+                    value={newCrop.available_quantity || ''}
+                    onChange={e => setNewCrop({...newCrop, available_quantity: parseInt(e.target.value) || 0})}
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={addCrop} disabled={saving} className="flex-1 bg-green-600 text-white py-2 rounded-lg font-bold">Add</button>
+                  <button onClick={() => setIsAdding(false)} className="flex-1 bg-stone-200 text-stone-600 py-2 rounded-lg font-bold">Cancel</button>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="p-0 overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
@@ -161,6 +255,7 @@ export default function FarmerDashboard() {
                   <th className="p-6 font-medium">Bulk Price</th>
                   <th className="p-6 font-medium">Available</th>
                   <th className="p-6 font-medium">Status</th>
+                  {isEditing && <th className="p-6 font-medium text-right">Action</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-100">
@@ -179,7 +274,7 @@ export default function FarmerDashboard() {
                           />
                         </div>
                       ) : (
-                        `$${crop.price.toFixed(2)}`
+                        `$${(crop.price || 0).toFixed(2)}`
                       )}
                     </td>
                     <td className="p-6 text-stone-600">
@@ -201,6 +296,13 @@ export default function FarmerDashboard() {
                         {crop.status}
                       </span>
                     </td>
+                    {isEditing && (
+                      <td className="p-6 text-right">
+                        <button onClick={() => deleteCrop(crop.id)} className="text-red-400 hover:text-red-600 p-2">
+                          <Trash2 size={18} />
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
