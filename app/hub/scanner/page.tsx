@@ -29,7 +29,12 @@ export default function HubScanner() {
         verifyTicket(decodedText);
         scanner.clear();
       },
-      (error) => {}
+      (error) => {
+        // Optional: Handle specific camera errors for better UX
+        if (error?.includes("NotFoundError") || error?.includes("NotAllowedError")) {
+          console.error("Camera access denied or not found");
+        }
+      }
     );
 
     return () => {
