@@ -1,19 +1,52 @@
 'use client';
 
-import React from 'react';
-import { PlusCircle, Calendar, DollarSign, Sprout, ArrowRight } from 'lucide-react';
+import React, { useState } from 'react';
+import { PlusCircle, Calendar, DollarSign, Sprout, ArrowRight, Save, X } from 'lucide-react';
+
+interface Crop {
+  id: string;
+  name: string;
+  price: string;
+  available: number;
+  status: 'Active' | 'Sold Out';
+}
+
+const INITIAL_CROPS: Crop[] = [
+  { id: '1', name: 'Apple Bananas (Bunch)', price: '$6.00', available: 40, status: 'Active' },
+  { id: '2', name: 'Taro / Kalo (lb)', price: '$4.50', available: 100, status: 'Active' },
+  { id: '3', name: 'Okinawan Sweet Potato (2 lb)', price: '$7.50', available: 50, status: 'Active' },
+  { id: '4', name: 'Cherry Tomatoes (Pint)', price: '$5.00', available: 30, status: 'Active' },
+  { id: '5', name: 'Aquaponic Butter Lettuce', price: '$3.00', available: 0, status: 'Sold Out' },
+];
 
 export default function FarmerDashboard() {
+  const [crops, setCrops] = useState<Crop[]>(INITIAL_CROPS);
+  const [isEditing, setIsEditing] = useState(false);
+
   const handleConnectStripe = async () => {
     try {
       const res = await fetch('/api/stripe/connect', { method: 'POST' });
       const data = await res.json();
       if (data.url) {
-        window.location.href = data.url; // Redirect to Stripe Onboarding
+        window.location.href = data.url;
       }
     } catch (err) {
       console.error(err);
     }
+  };
+
+  const updateInventory = (id: string, field: keyof Crop, value: string | number) => {
+    setCrops(prev => prev.map(crop => {
+      if (crop.id === id) {
+        const updated = { ...crop, [field]: value };
+        // Auto-update status based on availability
+        if (field === 'available') {
+          updated.status = Number(value) > 0 ? 'Active' : 'Sold Out';
+        }
+        return updated;
+      }
+      return crop;
+    }));
   };
 
   return (
@@ -59,9 +92,31 @@ export default function FarmerDashboard() {
         <div className="bg-white rounded-2xl shadow-sm border border-stone-200 overflow-hidden">
           <div className="p-6 border-b border-stone-100 flex justify-between items-center bg-stone-50/50">
             <h2 className="text-xl font-bold text-stone-800">Weekly Harvest List</h2>
-            <button className="text-green-700 bg-green-100 hover:bg-green-200 px-4 py-2 rounded-lg flex items-center font-medium transition-colors">
-              <PlusCircle size={18} className="mr-2"/> Add Crop
-            </button>
+            <div className="flex gap-3">
+              {isEditing ? (
+                <>
+                  <button 
+                    onClick={() => setIsEditing(false)}
+                    className="text-stone-700 bg-stone-100 hover:bg-stone-200 px-4 py-2 rounded-lg flex items-center font-medium transition-colors"
+                  >
+                    <Save size={18} className="mr-2"/> Save Changes
+                  </button>
+                  <button 
+                    onClick={() => setIsEditing(false)}
+                    className="text-red-700 bg-red-50 hover:bg-red-100 px-4 py-2 rounded-lg flex items-center font-medium transition-colors"
+                  >
+                    <X size={18} className="mr-2"/> Cancel
+                  </button>
+                </>
+              ) : (
+                <button 
+                  onClick={() => setIsEditing(true)}
+                  className="text-green-700 bg-green-100 hover:bg-green-200 px-4 py-2 rounded-lg flex items-center font-medium transition-colors"
+                >
+                  <PlusCircle size={18} className="mr-2"/> Manage Inventory
+                </button>
+              )}
+            </div>
           </div>
           <div className="p-0 overflow-x-auto">
             <table className="w-full text-left border-collapse">
@@ -74,36 +129,31 @@ export default function FarmerDashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-100">
-                <tr className="hover:bg-stone-50 transition-colors">
-                  <td className="p-6 font-medium text-stone-900">Apple Bananas (Bunch)</td>
-                  <td className="p-6 text-stone-600">$6.00</td>
-                  <td className="p-6 text-stone-600">40</td>
-                  <td className="p-6"><span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">Active</span></td>
-                </tr>
-                <tr className="hover:bg-stone-50 transition-colors">
-                  <td className="p-6 font-medium text-stone-900">Taro / Kalo (lb)</td>
-                  <td className="p-6 text-stone-600">$4.50</td>
-                  <td className="p-6 text-stone-600">100</td>
-                  <td className="p-6"><span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">Active</span></td>
-                </tr>
-                <tr className="hover:bg-stone-50 transition-colors">
-                  <td className="p-6 font-medium text-stone-900">Okinawan Sweet Potato (2 lb)</td>
-                  <td className="p-6 text-stone-600">$7.50</td>
-                  <td className="p-6 text-stone-600">50</td>
-                  <td className="p-6"><span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">Active</span></td>
-                </tr>
-                <tr className="hover:bg-stone-50 transition-colors">
-                  <td className="p-6 font-medium text-stone-900">Cherry Tomatoes (Pint)</td>
-                  <td className="p-6 text-stone-600">$5.00</td>
-                  <td className="p-6 text-stone-600">30</td>
-                  <td className="p-6"><span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">Active</span></td>
-                </tr>
-                <tr className="hover:bg-stone-50 transition-colors">
-                  <td className="p-6 font-medium text-stone-900">Aquaponic Butter Lettuce</td>
-                  <td className="p-6 text-stone-600">$3.00</td>
-                  <td className="p-6 text-stone-600">0</td>
-                  <td className="p-6"><span className="bg-stone-100 text-stone-600 px-3 py-1 rounded-full text-sm font-medium">Sold Out</span></td>
-                </tr>
+                {crops.map((crop) => (
+                  <tr key={crop.id} className="hover:bg-stone-50 transition-colors">
+                    <td className="p-6 font-medium text-stone-900">{crop.name}</td>
+                    <td className="p-6 text-stone-600">{crop.price}</td>
+                    <td className="p-6 text-stone-600">
+                      {isEditing ? (
+                        <input 
+                          type="number"
+                          value={crop.available}
+                          onChange={(e) => updateInventory(crop.id, 'available', parseInt(e.target.value) || 0)}
+                          className="w-20 px-2 py-1 border border-stone-200 rounded bg-white text-stone-900"
+                        />
+                      ) : (
+                        crop.available
+                      )}
+                    </td>
+                    <td className="p-6">
+                      <span className={`${
+                        crop.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-stone-100 text-stone-600'
+                      } px-3 py-1 rounded-full text-sm font-medium`}>
+                        {crop.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>

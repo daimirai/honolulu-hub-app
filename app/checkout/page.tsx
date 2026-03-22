@@ -1,11 +1,18 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CreditCard, ShieldCheck, ArrowLeft, Leaf } from 'lucide-react';
 import Link from 'next/link';
+import { useCart, PRODUCTS } from '../lib/cart-context';
 
 export default function CheckoutPage() {
+  const { cart, cartTotal } = useCart();
   const [loading, setLoading] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const handlePayment = () => {
     setLoading(true);
@@ -15,6 +22,13 @@ export default function CheckoutPage() {
       setLoading(false);
     }, 1000);
   };
+
+  if (!isMounted) return <div className="min-h-screen bg-stone-50" />;
+
+  const cartItems = Object.entries(cart).map(([id, qty]) => {
+    const product = PRODUCTS.find(p => p.id === id);
+    return { ...product, qty };
+  }).filter(item => item.id);
 
   return (
     <div className="min-h-screen bg-stone-50 font-sans text-stone-900 p-4 md:p-8">
@@ -36,19 +50,21 @@ export default function CheckoutPage() {
             <div className="space-y-4">
               <h2 className="text-lg font-bold uppercase tracking-wider text-stone-400">Order Summary</h2>
               <div className="divide-y divide-stone-100 border-t border-b border-stone-100 py-2">
-                <div className="flex justify-between py-3">
-                  <span>Apple Bananas (Bunch)</span>
-                  <span className="font-bold">$6.00</span>
-                </div>
-                <div className="flex justify-between py-3">
-                  <span>Taro / Kalo (1 lb)</span>
-                  <span className="font-bold">$4.50</span>
-                </div>
+                {cartItems.length > 0 ? cartItems.map((item) => (
+                  <div key={item.id} className="flex justify-between py-3">
+                    <span>{item.name} <span className="text-stone-400 ml-2">x{item.qty}</span></span>
+                    <span className="font-bold">${((item.price || 0) * item.qty).toFixed(2)}</span>
+                  </div>
+                )) : (
+                  <div className="py-6 text-center text-stone-500 italic">
+                    Your box is empty. Go back to the harvest list!
+                  </div>
+                )}
               </div>
               
               <div className="flex justify-between items-center pt-2">
                 <span className="text-xl font-medium">Total due today</span>
-                <span className="text-3xl font-black">$10.50</span>
+                <span className="text-3xl font-black">${cartTotal.toFixed(2)}</span>
               </div>
             </div>
 
@@ -56,8 +72,8 @@ export default function CheckoutPage() {
             <div className="space-y-4 pt-4">
               <button 
                 onClick={handlePayment}
-                disabled={loading}
-                className="w-full bg-stone-900 hover:bg-stone-800 disabled:bg-stone-400 text-white py-4 rounded-2xl font-bold text-xl shadow-lg transition-all flex items-center justify-center"
+                disabled={loading || cartItems.length === 0}
+                className="w-full bg-stone-900 hover:bg-stone-800 disabled:bg-stone-200 text-white py-4 rounded-2xl font-bold text-xl shadow-lg transition-all flex items-center justify-center"
               >
                 {loading ? "Processing..." : (
                   <>

@@ -1,10 +1,22 @@
-import React from 'react';
-import { ShoppingBag, MapPin, Clock, Leaf } from 'lucide-react';
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { ShoppingBag, MapPin, Clock, Leaf, ShoppingCart, Plus, Minus } from 'lucide-react';
 import Link from 'next/link';
+import { useCart, PRODUCTS } from '../lib/cart-context';
 
 export default function ConsumerStorefront() {
+  const { cart, addToCart, removeFromCart, cartTotal, cartCount } = useCart();
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) return <div className="min-h-screen bg-stone-50" />;
+
   return (
-    <div className="min-h-screen bg-stone-50 font-sans text-stone-900">
+    <div className="min-h-screen bg-stone-50 font-sans text-stone-900 pb-32">
       {/* Hero Section */}
       <header className="bg-green-800 text-white py-16 px-6 text-center">
         <h1 className="text-4xl md:text-5xl font-bold mb-4">Waimanalo Greens</h1>
@@ -46,76 +58,69 @@ export default function ConsumerStorefront() {
           <Leaf className="mr-2 text-green-600" /> This Week's Harvest
         </h2>
 
-        {/* Item 1 */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-stone-200 flex flex-col md:flex-row justify-between items-center gap-4">
-          <div>
-            <h3 className="text-xl font-bold">Apple Bananas (Bunch)</h3>
-            <p className="text-stone-500 mt-1">Grown in Waimanalo. Sweet and dense.</p>
-          </div>
-          <div className="flex items-center gap-4 w-full md:w-auto justify-between">
-            <span className="text-2xl font-bold text-stone-900">$6.00</span>
-            <button className="bg-stone-900 hover:bg-stone-800 text-white px-6 py-2 rounded-lg font-medium transition-colors">
-              Add to Box
-            </button>
-          </div>
-        </div>
-
-        {/* Item 2 */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-stone-200 flex flex-col md:flex-row justify-between items-center gap-4">
-          <div>
-            <h3 className="text-xl font-bold">Taro / Kalo (1 lb)</h3>
-            <p className="text-stone-500 mt-1">Freshly harvested. Perfect for poi or roasting.</p>
-          </div>
-          <div className="flex items-center gap-4 w-full md:w-auto justify-between">
-            <span className="text-2xl font-bold text-stone-900">$4.50</span>
-            <button className="bg-stone-900 hover:bg-stone-800 text-white px-6 py-2 rounded-lg font-medium transition-colors">
-              Add to Box
-            </button>
-          </div>
-        </div>
-
-        {/* Item 3 */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-stone-200 flex flex-col md:flex-row justify-between items-center gap-4">
-          <div>
-            <h3 className="text-xl font-bold">Okinawan Sweet Potato (2 lb)</h3>
-            <p className="text-stone-500 mt-1">Vibrant purple, naturally sweet, and nutrient-dense.</p>
-          </div>
-          <div className="flex items-center gap-4 w-full md:w-auto justify-between">
-            <span className="text-2xl font-bold text-stone-900">$7.50</span>
-            <button className="bg-stone-900 hover:bg-stone-800 text-white px-6 py-2 rounded-lg font-medium transition-colors">
-              Add to Box
-            </button>
-          </div>
-        </div>
-
-        {/* Item 4 */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-stone-200 flex flex-col md:flex-row justify-between items-center gap-4">
-          <div>
-            <h3 className="text-xl font-bold">Local Cherry Tomatoes (Pint)</h3>
-            <p className="text-stone-500 mt-1">Sun-ripened in Waimanalo. Bursting with flavor.</p>
-          </div>
-          <div className="flex items-center gap-4 w-full md:w-auto justify-between">
-            <span className="text-2xl font-bold text-stone-900">$5.00</span>
-            <button className="bg-stone-900 hover:bg-stone-800 text-white px-6 py-2 rounded-lg font-medium transition-colors">
-              Add to Box
-            </button>
-          </div>
-        </div>
-
+        {PRODUCTS.map((product) => {
+          const quantity = cart[product.id] || 0;
+          return (
+            <div key={product.id} className="bg-white p-6 rounded-2xl shadow-sm border border-stone-200 flex flex-col md:flex-row justify-between items-center gap-4">
+              <div className="flex-1">
+                <h3 className="text-xl font-bold">{product.name}</h3>
+                <p className="text-stone-500 mt-1">Freshly grown. Sweet and dense.</p>
+              </div>
+              <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end">
+                <span className="text-2xl font-bold text-stone-900">${product.price.toFixed(2)}</span>
+                
+                {quantity === 0 ? (
+                  <button 
+                    onClick={() => addToCart(product.id)}
+                    className="bg-stone-900 hover:bg-stone-800 text-white px-8 py-3 rounded-xl font-bold transition-all active:scale-95 shadow-lg"
+                  >
+                    Add to Box
+                  </button>
+                ) : (
+                  <div className="flex items-center bg-stone-100 rounded-xl p-1 border border-stone-200">
+                    <button 
+                      onClick={() => removeFromCart(product.id)}
+                      className="p-2 hover:bg-white rounded-lg transition-colors text-stone-600"
+                    >
+                      <Minus size={20} />
+                    </button>
+                    <span className="px-4 font-bold text-lg min-w-[3rem] text-center">{quantity}</span>
+                    <button 
+                      onClick={() => addToCart(product.id)}
+                      className="p-2 hover:bg-white rounded-lg transition-colors text-stone-600"
+                    >
+                      <Plus size={20} />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </main>
 
       {/* Floating Checkout Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-stone-200 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-50">
-        <div className="max-w-4xl mx-auto flex justify-between items-center">
-          <div>
-            <p className="text-stone-500 text-sm font-medium">Your Box</p>
-            <p className="text-2xl font-bold text-stone-900">$10.50</p>
+      {cartCount > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-stone-200 p-6 shadow-[0_-8px_30px_rgb(0,0,0,0.12)] z-50 animate-in fade-in slide-in-from-bottom-8 duration-500">
+          <div className="max-w-4xl mx-auto flex justify-between items-center">
+            <div className="flex items-center">
+              <div className="bg-green-100 p-3 rounded-2xl mr-4 relative text-green-800">
+                <ShoppingCart size={28} />
+                <span className="absolute -top-2 -right-2 bg-green-600 text-white text-[12px] font-black w-6 h-6 flex items-center justify-center rounded-full border-2 border-white shadow-md">
+                  {cartCount}
+                </span>
+              </div>
+              <div>
+                <p className="text-stone-500 text-sm font-bold uppercase tracking-tight">Your Total</p>
+                <p className="text-3xl font-black text-stone-900">${cartTotal.toFixed(2)}</p>
+              </div>
+            </div>
+            <Link href="/checkout" className="bg-green-600 hover:bg-green-700 active:scale-95 text-white px-10 py-4 rounded-2xl font-black text-xl shadow-xl shadow-green-200 transition-all flex items-center">
+              Checkout <ShoppingCart className="ml-2" size={20} />
+            </Link>
           </div>
-          <Link href="/checkout" className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-xl font-bold text-lg shadow-sm transition-colors">
-            Checkout
-          </Link>
         </div>
-      </div>
+      )}
     </div>
   );
 }
