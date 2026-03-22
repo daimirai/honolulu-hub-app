@@ -51,7 +51,17 @@ export default function CheckoutPage() {
 
       if (itemsError) throw itemsError;
 
-      // 3. Redirect to Success with real Order ID
+      // 3. Log "Simulated Email" receipt
+      await supabase
+        .from('email_log')
+        .insert([{
+          recipient_email: 'demo@customer.com',
+          subject: 'Order Confirmed: Saturday Morning Harvest 🍍',
+          body: `Thanks for your order! Your Saturday morning box is reserved. Total: $${cartTotal.toFixed(2)}. Show your QR code at Kailua Coffee Co.`,
+          order_id: order.id
+        }]);
+
+      // 4. Redirect to Success with real Order ID
       router.push(`/checkout/success?session_id=${order.id}`);
 
     } catch (err: any) {
