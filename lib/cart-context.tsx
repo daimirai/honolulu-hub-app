@@ -1,26 +1,48 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from './supabase';
+
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+  description?: string;
+  available_quantity?: number;
+  status?: string;
+}
 
 interface CartContextType {
+  products: Product[];
   cart: Record<string, number>;
   addToCart: (id: string) => void;
   removeFromCart: (id: string) => void;
   cartTotal: number;
   cartCount: number;
+  loading: boolean;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-const PRODUCTS = [
-  { id: '1', name: 'Apple Bananas (Bunch)', price: 6.00 },
-  { id: '2', name: 'Taro / Kalo (1 lb)', price: 4.50 },
-  { id: '3', name: 'Okinawan Sweet Potato (2 lb)', price: 7.50 },
-  { id: '4', name: 'Local Cherry Tomatoes (Pint)', price: 5.00 },
-];
-
 export function CartProvider({ children }: { children: React.ReactNode }) {
+  const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<Record<string, number>>({});
+  const [loading, setLoading] = useState(true);
+
+  // Fetch real products from Supabase
+  useEffect(() => {
+    async function fetchProducts() {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .order('name');
+      
+      if (data) setProducts(data);
+      if (error) console.error('Error fetching products:', error);
+      setLoading(false);
+    }
+    fetchProducts();
+  }, []);
 
   // Persist cart to localStorage
   useEffect(() => {
@@ -55,14 +77,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   };
 
   const cartTotal = Object.entries(cart).reduce((sum, [id, qty]) => {
-    const product = PRODUCTS.find(p => p.id === id);
+    const product = products.find(p => p.id === id);
     return sum + (product ? product.price * qty : 0);
   }, 0);
 
   const cartCount = Object.values(cart).reduce((sum, qty) => sum + qty, 0);
 
   return (
-    <CartContext.Provider value={{ cart, addToCart, removeFromCart, cartTotal, cartCount }}>
+    <CartContext.Provider value={{ products, cart, addToCart, removeFromCart, cartTotal, cartCount, loading }}>
       {children}
     </CartContext.Provider>
   );
@@ -75,5 +97,3 @@ export function useCart() {
   }
   return context;
 }
-
-export { PRODUCTS };
